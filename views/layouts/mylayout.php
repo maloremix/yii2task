@@ -21,9 +21,7 @@ $this->beginPage();
 <?php $this->beginBody() ?>
 
 <div class="container">
-    <div class="row">
-        <?= $content ?>
-    </div>
+    <?= $content ?>
 </div>
 
 <?php $this->endBody() ?>

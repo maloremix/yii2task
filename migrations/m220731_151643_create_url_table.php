@@ -17,6 +17,7 @@ class m220731_151643_create_url_table extends Migration
             'url' => $this->string(),
             'frequency' => $this->integer(),
             'replays' => $this->integer(),
+            'date' => $this->timestamp(),
         ]);
     }
 

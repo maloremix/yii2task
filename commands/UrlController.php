@@ -23,7 +23,7 @@ use yii\db\Query;
  * @author Qiang Xue <qiang.xue@gmail.com>
  * @since 2.0
  */
-class HelloController extends Controller
+class UrlController extends Controller
 {
     public function actionIndex()
     {

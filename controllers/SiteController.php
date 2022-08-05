@@ -2,7 +2,12 @@
 
 namespace app\controllers;
 
+use app\models\Checker;
+use app\models\Url;
+use app\models\UrlForm;
 use Yii;
+use yii\data\ActiveDataProvider;
+use yii\db\Query;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\Response;
@@ -54,75 +59,77 @@ class SiteController extends Controller
         ];
     }
 
-    /**
-     * Displays homepage.
-     *
-     * @return string
-     */
     public function actionIndex()
     {
-        return $this->render('index');
+        $model = new UrlForm();
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            $model->timeRefresh = 0;
+            $model->error = 0;
+            $model->save();
+            return $this->render('index', ['model' => $model]);
+        } else {
+            // либо страница отображается первый раз, либо есть ошибка в данных
+            return $this->render('index', ['model' => $model]);
+        }
     }
 
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
+    public static function isSiteAvailible($url) {
 
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
+        // Инициализация cURL
+        $curlInit = curl_init($url);
 
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
+        // Установка параметров запроса
+        curl_setopt($curlInit,CURLOPT_CONNECTTIMEOUT,10);
+        curl_setopt($curlInit,CURLOPT_HEADER,true);
+        curl_setopt($curlInit,CURLOPT_NOBODY,true);
+        curl_setopt($curlInit,CURLOPT_RETURNTRANSFER,true);
+
+        // Получение ответа
+        $response = curl_exec($curlInit);
+        $httpcode = curl_getinfo($curlInit, CURLINFO_HTTP_CODE);
+        // закрываем CURL
+        curl_close($curlInit);
+
+        return $response ? true : false;
+    }
+
+    public static function SiteHttpCode($url) {
+
+        // Инициализация cURL
+        $curlInit = curl_init($url);
+
+        // Установка параметров запроса
+        curl_setopt($curlInit,CURLOPT_CONNECTTIMEOUT,10);
+        curl_setopt($curlInit,CURLOPT_HEADER,true);
+        curl_setopt($curlInit,CURLOPT_NOBODY,true);
+        curl_setopt($curlInit,CURLOPT_RETURNTRANSFER,true);
+        curl_exec($curlInit);
+        $httpcode = curl_getinfo($curlInit, CURLINFO_HTTP_CODE);
+        // закрываем CURL
+        curl_close($curlInit);
+
+        return $httpcode;
+    }
+    public function actionAdmin(){
+        $dataProvider = new ActiveDataProvider([
+            'query' => UrlForm::find(),
+            'pagination' => [
+                'pageSize' => 20,
+            ]
         ]);
-    }
-
-    /**
-     * Logout action.
-     *
-     * @return Response
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
+        $request = Yii::$app->request;
+        $dataProvider2 = new ActiveDataProvider([
+            'query' => Checker::find()->where(['url_id' => $request->get('id')]),
+            'pagination' => [
+                'pageSize' => 20,
+            ]
         ]);
-    }
 
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
+        if (!$request->get('id')) {
+            return $this->render('admin', ['dataProvider' => $dataProvider]);
+        } else {
+            $url_name = UrlForm::Find()->where(['id' => $request->get('id')])->one()->url;
+            return $this->render('admin', ['dataProvider' => $dataProvider2, 'url_name' => $url_name]);
+        }
     }
 }
